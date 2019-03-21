@@ -1,51 +1,24 @@
-// Copyright © 2019 NAME HERE <EMAIL ADDRESS>
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 package cmd
 
 import (
 	"fmt"
 
-	apireponses "github.com/jacobsee/applier-gen/pkg/api_responses"
+	githubapi "github.com/jacobsee/applier-gen/pkg/github_api"
 	"github.com/spf13/cobra"
 )
 
-// getLatestVerCmd represents the getLatestVer command
+// getLatestVersionCmd represents the get-latest-version command
 var getLatestVersionCmd = &cobra.Command{
 	Use:   "get-latest-version",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "Display the latest version of OpenShift-Applier",
+	Long: `Uses the GitHub.com API to determine the latest released version
+of OpenShift-Applier. For information purposes only, and not a prerequisite
+for any other command (init performs this action automatically).`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println(apireponses.GetLatestVersionInfo().TagName)
+		fmt.Println(githubapi.GetLatestVersionInfo().TagName)
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(getLatestVersionCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// getLatestVerCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// getLatestVerCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

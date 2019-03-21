@@ -1,4 +1,4 @@
-package apiresponses
+package githubapi
 
 import (
 	"encoding/json"
@@ -6,6 +6,7 @@ import (
 	"time"
 )
 
+// GetLatestVersionInfo calls the GitHub API and returns a GitHubRelease object representing the latest release of OpenShift-Applier
 func GetLatestVersionInfo() GitHubRelease {
 	client := &http.Client{Timeout: 10 * time.Second}
 	r, err := client.Get("https://api.github.com/repos/redhat-cop/openshift-applier/releases/latest")
@@ -30,7 +31,7 @@ type GitHubRelease struct {
 	TargetCommitish string        `json:"target_commitish"`
 	Name            string        `json:"name"`
 	Draft           bool          `json:"draft"`
-	Author          GitHubAuthor  `json:"author"`
+	Author          GitHubUser    `json:"author"`
 	Prerelease      bool          `json:"prerelease"`
 	CreatedAt       time.Time     `json:"created_at"`
 	PublishedAt     time.Time     `json:"published_at"`
@@ -40,8 +41,8 @@ type GitHubRelease struct {
 	Body            string        `json:"body"`
 }
 
-// GitHubAuthor is a sub-component of GitHubLatestRelease
-type GitHubAuthor struct {
+// GitHubUser is a sub-component of GitHubLatestRelease, representing a user on GitHub
+type GitHubUser struct {
 	Login             string `json:"login"`
 	ID                int    `json:"id"`
 	NodeID            string `json:"node_id"`

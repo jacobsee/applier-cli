@@ -1,17 +1,3 @@
-// Copyright © 2019 NAME HERE <EMAIL ADDRESS>
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 package cmd
 
 import (
@@ -19,116 +5,148 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
 	"os/exec"
 
-	//templatev1 "github.com/openshift/api/template/v1"
 	yamlresources "github.com/jacobsee/applier-gen/pkg/yaml_resources"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	yaml "gopkg.in/yaml.v2"
-	//"k8s.io/apimachinery/pkg/runtime"
 )
 
 // addCmd represents the add command
 var addCmd = &cobra.Command{
 	Use:   "add",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "Add new resources to the current inventory",
+	Long: `Add new resources to the current inventory. Resources that
+are templates are added to the templates directory, while all
+others are added to the files directory. Non-template resources
+can also be converted into templates. Generated resources can immediately
+be opened in your default editor for further tuning.`,
 	Run: func(cmd *cobra.Command, args []string) {
 
+		// Get all flags
 		fromCluster, _ := cmd.Flags().GetBool("from-cluster")
 		fromFile, _ := cmd.Flags().GetBool("from-file")
 		makeTemplate, _ := cmd.Flags().GetBool("make-template")
+		edit, _ := cmd.Flags().GetBool("edit")
 
 		var resourceYaml map[string]interface{}
-		var out bytes.Buffer
 
 		if fromCluster {
-
-			cmd := exec.Command("oc", "get", args[0], "--export", "-o", "yaml")
-
-			cmd.Stdout = &out
-			err := cmd.Run()
-			if err != nil {
-				log.Fatal("Could not export the desired resource from the cluster. Are you sure that it exists?")
-			}
-			err = yaml.Unmarshal(out.Bytes(), &resourceYaml)
-			if err != nil {
-				log.Fatal("Unable to interpret the resource.")
-			}
-
+			resourceYaml = getResourceFromCluster(args[0])
 		} else if fromFile {
-
-			fileContents, err := ioutil.ReadFile(args[0])
-			if err != nil {
-				log.Fatal("Could not read the specified file.")
-			}
-			yaml.Unmarshal(fileContents, &resourceYaml)
-			if err != nil {
-				log.Fatal("Unable to interpret the file as valid YAML.")
-			}
-
+			resourceYaml = getResourceFromFile(args[0])
 		} else {
-
 			log.Fatal("Unclear where to get the resource. Please use --from-cluster (-c) or --from-file (-f).")
-			return
-
 		}
 
 		resourceKind := resourceYaml["kind"].(string)
+		name := resourceYaml["metadata"].(map[interface{}]interface{})["name"].(string)
+		var fileCreated string
 
 		if makeTemplate || resourceKind == "Template" {
-
-			outByte := []byte{}
-
-			name := resourceYaml["metadata"].(map[interface{}]interface{})["name"].(string)
-
-			if resourceKind != "Template" {
-				template := yamlresources.Template{
-					APIVersion: "v1",
-					Kind:       "Template",
-					Metadata: yamlresources.TemplateMetadata{
-						Name: name,
-					},
-					Objects: []map[string]interface{}{
-						resourceYaml,
-					},
-					Parameters: nil,
-				}
-				outByte, _ = yaml.Marshal(template)
-			} else {
-				outByte, _ = yaml.Marshal(resourceYaml)
-			}
-
-			err := ioutil.WriteFile(fmt.Sprintf("templates/%s.yml", name), outByte, 0766)
-			if err != nil {
-				log.Fatal(err)
-				fmt.Println("Could not add template to the current inventory.")
-			} else {
-				fmt.Println("Template added to the current inventory.")
-			}
-
+			fileCreated = writeTemplate(resourceYaml, resourceKind, name)
 		} else {
+			fileCreated = writeFile(resourceYaml, resourceKind, name)
+		}
 
-			outByte, _ := yaml.Marshal(resourceYaml)
-
-			name := resourceYaml["metadata"].(map[interface{}]interface{})["name"].(string)
-
-			err := ioutil.WriteFile(fmt.Sprintf("files/%s.yml", name), outByte, 0766)
-			if err != nil {
-				log.Fatal(err)
-				fmt.Println("Could not add file to the current inventory.")
-			} else {
-				fmt.Println("File added to the current inventory.")
-			}
-
+		if edit {
+			cmd := exec.Command(viper.GetString("editor"), fileCreated)
+			cmd.Stdin = os.Stdin
+			cmd.Stdout = os.Stdout
+			cmd.Run()
 		}
 
 	},
+}
+
+func getResourceFromCluster(resourceName string) map[string]interface{} {
+
+	var out bytes.Buffer
+	var resource map[string]interface{}
+
+	cmd := exec.Command("oc", "get", resourceName, "--export", "-o", "yaml")
+	cmd.Stdout = &out
+	err := cmd.Run()
+	if err != nil {
+		log.Fatal("Could not export the desired resource from the cluster. Are you sure that you are logged in and it exists?")
+	}
+	err = yaml.Unmarshal(out.Bytes(), &resource)
+	if err != nil {
+		log.Fatal("Unable to interpret the resource.")
+	}
+
+	return resource
+
+}
+
+func getResourceFromFile(fileName string) map[string]interface{} {
+
+	var resource map[string]interface{}
+
+	fileContents, err := ioutil.ReadFile(fileName)
+	if err != nil {
+		log.Fatal("Could not read the specified file.")
+	}
+	yaml.Unmarshal(fileContents, &resource)
+	if err != nil {
+		log.Fatal("Unable to interpret the file as valid YAML.")
+	}
+
+	return resource
+
+}
+
+func writeTemplate(resource map[string]interface{}, kind string, name string) string {
+
+	outByte := []byte{}
+
+	if kind != "Template" {
+		template := yamlresources.Template{
+			APIVersion: "v1",
+			Kind:       "Template",
+			Metadata: yamlresources.TemplateMetadata{
+				Name: name,
+			},
+			Objects: []map[string]interface{}{
+				resource,
+			},
+			Parameters: nil,
+		}
+		outByte, _ = yaml.Marshal(template)
+	} else {
+		outByte, _ = yaml.Marshal(resource)
+	}
+
+	outFile := fmt.Sprintf("templates/%s.yml", name)
+	err := ioutil.WriteFile(outFile, outByte, 0766)
+	if err != nil {
+		log.Fatal(err)
+		fmt.Println("Could not add template to the current inventory.")
+	} else {
+		fmt.Println("Template added to the current inventory.")
+	}
+
+	return outFile
+
+}
+
+func writeFile(resource map[string]interface{}, kind string, name string) string {
+
+	outByte, _ := yaml.Marshal(resource)
+
+	outFile := fmt.Sprintf("files/%s.yml", name)
+	err := ioutil.WriteFile(outFile, outByte, 0766)
+	if err != nil {
+		log.Fatal(err)
+		fmt.Println("Could not add file to the current inventory.")
+	} else {
+		fmt.Println("File added to the current inventory.")
+	}
+
+	return outFile
+
 }
 
 func init() {
@@ -137,14 +155,5 @@ func init() {
 	addCmd.Flags().BoolP("from-cluster", "c", false, "Use an existing cluster as a source for this resource")
 	addCmd.Flags().BoolP("from-file", "f", false, "Use a yaml file as a source for this resource")
 	addCmd.Flags().BoolP("make-template", "t", false, "Convert the resource into a template (if it isn't already)")
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// addCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// addCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	addCmd.Flags().BoolP("edit", "e", false, "Immediately open the file in your default editor once created")
 }
