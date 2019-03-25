@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	githubapi "github.com/jacobsee/applier-gen/pkg/github_api"
+	githubapi "github.com/jacobsee/applier-cli/pkg/github_api"
 	"github.com/spf13/cobra"
 )
 

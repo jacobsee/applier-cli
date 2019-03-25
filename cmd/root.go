@@ -13,9 +13,9 @@ var cfgFile string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "applier-gen",
+	Use:   "applier-cli",
 	Short: "A tool for working with OpenShift-Applier inventories",
-	Long: `Applier-gen scaffolds OpenShift-Applier inventories using
+	Long: `applier-cli scaffolds OpenShift-Applier inventories using
 the latest release available on GitHub.com. It provides tools
 for adding resources to the inventory from both local files and
 also from existing cluster resources (if currently logged in to
@@ -35,7 +35,7 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.applier-gen.yaml)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.applier-cli.yaml)")
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -51,9 +51,9 @@ func initConfig() {
 			os.Exit(1)
 		}
 
-		// Search config in home directory with name ".applier-gen" (without extension).
+		// Search config in home directory with name ".applier-cli" (without extension).
 		viper.AddConfigPath(home)
-		viper.SetConfigName(".applier-gen")
+		viper.SetConfigName(".applier-cli")
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match

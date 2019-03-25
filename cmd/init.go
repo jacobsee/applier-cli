@@ -7,8 +7,8 @@ import (
 	"os"
 	"os/exec"
 
-	githubapi "github.com/jacobsee/applier-gen/pkg/github_api"
-	yamlresources "github.com/jacobsee/applier-gen/pkg/yaml_resources"
+	githubapi "github.com/jacobsee/applier-cli/pkg/github_api"
+	yamlresources "github.com/jacobsee/applier-cli/pkg/yaml_resources"
 	"github.com/spf13/cobra"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -29,6 +29,7 @@ In addition, the Ansible Galaxy requirements are installed if the ansible-galaxy
 	Run: func(cmd *cobra.Command, args []string) {
 		makeAllDirectories()
 		latestReleasedVersion := getLatestApplierReleaseTag()
+		writeConfigs()
 		writeGalaxyRequirements(latestReleasedVersion)
 		installGalaxyRequirements()
 	},
@@ -44,12 +45,19 @@ func makeAllDirectories() {
 }
 
 func writeConfigs() {
+	hosts := []byte("[seed-hosts]\nlocalhost")
+	err := ioutil.WriteFile("inventory/hosts", hosts, 0766)
+	if err != nil {
+		log.Fatal("Could not write inventory/hosts")
+	}
 	hostVars := []byte("ansible_connection: local")
-	err := ioutil.WriteFile("inventory/host_vars/localhost.yml", hostVars, 0766)
+	err = ioutil.WriteFile("inventory/host_vars/localhost.yml", hostVars, 0766)
 	if err != nil {
 		log.Fatal("Could not write inventory/host_vars/localhost.yml")
 	}
-		
+	groupVars := &yamlresources.ClusterContentList{}
+	yamlGroupVars, _ := yaml.Marshal(groupVars)
+	err = ioutil.WriteFile("inventory/group_vars/all.yml", yamlGroupVars, 0766)
 }
 
 func getLatestApplierReleaseTag() string {

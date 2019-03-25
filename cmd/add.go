@@ -8,7 +8,7 @@ import (
 	"os"
 	"os/exec"
 
-	yamlresources "github.com/jacobsee/applier-gen/pkg/yaml_resources"
+	yamlresources "github.com/jacobsee/applier-cli/pkg/yaml_resources"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	yaml "gopkg.in/yaml.v2"
@@ -120,7 +120,22 @@ func writeTemplate(resource map[string]interface{}, kind string, name string) st
 	}
 
 	outFile := fmt.Sprintf("templates/%s.yml", name)
+	paramsFile := fmt.Sprintf("params/%s", name)
 	err := ioutil.WriteFile(outFile, outByte, 0766)
+
+	yamlresources.TouchParamsFile(paramsFile)
+
+	clusterContents := yamlresources.GetClusterContentsFromFile()
+	clusterContents.OpenShiftClusterContent = append(clusterContents.OpenShiftClusterContent, yamlresources.ClusterContentObject{
+		Object: name,
+		Content: []yamlresources.ClusterContent{{
+			Name:     name,
+			Template: outFile,
+			Params:   paramsFile,
+		}},
+	})
+	yamlresources.WriteClusterContents(clusterContents)
+
 	if err != nil {
 		log.Fatal(err)
 		fmt.Println("Could not add template to the current inventory.")
@@ -138,6 +153,17 @@ func writeFile(resource map[string]interface{}, kind string, name string) string
 
 	outFile := fmt.Sprintf("files/%s.yml", name)
 	err := ioutil.WriteFile(outFile, outByte, 0766)
+
+	clusterContents := yamlresources.GetClusterContentsFromFile()
+	clusterContents.OpenShiftClusterContent = append(clusterContents.OpenShiftClusterContent, yamlresources.ClusterContentObject{
+		Object: name,
+		Content: []yamlresources.ClusterContent{{
+			Name: name,
+			File: outFile,
+		}},
+	})
+	yamlresources.WriteClusterContents(clusterContents)
+
 	if err != nil {
 		log.Fatal(err)
 		fmt.Println("Could not add file to the current inventory.")

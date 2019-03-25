@@ -14,7 +14,7 @@
 
 package main
 
-import "github.com/jacobsee/applier-gen/cmd"
+import "github.com/jacobsee/applier-cli/cmd"
 
 func main() {
 	cmd.Execute()
