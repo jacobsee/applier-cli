@@ -50,14 +50,31 @@ func writeConfigs() {
 	if err != nil {
 		log.Fatal("Could not write inventory/hosts")
 	}
+
 	hostVars := []byte("ansible_connection: local")
 	err = ioutil.WriteFile("inventory/host_vars/localhost.yml", hostVars, 0766)
 	if err != nil {
 		log.Fatal("Could not write inventory/host_vars/localhost.yml")
 	}
+
+	ansiblePlaybook := []byte(`- name: Deploy OpenShift-Applier Inventory
+  hosts: "seed-hosts"
+  tasks:
+  - include_role:
+      name: roles/openshift-applier
+    tags:
+    - openshift-applier`)
+	err = ioutil.WriteFile("apply.yml", ansiblePlaybook, 0766)
+	if err != nil {
+		log.Fatal("Could not write apply.yml")
+	}
+
 	groupVars := &yamlresources.ClusterContentList{}
 	yamlGroupVars, _ := yaml.Marshal(groupVars)
 	err = ioutil.WriteFile("inventory/group_vars/all.yml", yamlGroupVars, 0766)
+	if err != nil {
+		log.Fatal("Could not write inventory/group_vars/all.yml")
+	}
 }
 
 func getLatestApplierReleaseTag() string {
@@ -77,6 +94,9 @@ func writeGalaxyRequirements(version string) {
 		log.Fatal("Could not generate requirements file.")
 	}
 	err = ioutil.WriteFile("requirements.yml", yamlRequirements, 0766)
+	if err != nil {
+		log.Fatal("Could not write requirements file.")
+	}
 }
 
 func installGalaxyRequirements() {
