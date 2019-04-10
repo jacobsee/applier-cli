@@ -71,6 +71,8 @@ func add(flags runFlags, args []string, clusterInterface clusterinterface.Cluste
 	name := resource["metadata"].(map[interface{}]interface{})["name"].(string)
 	var fileCreated string
 
+	filterUndesireableKeys(resource)
+
 	if flags.makeTemplate || resourceKind == "Template" {
 		fileCreated = writeTemplateToInventory(resource, resourceKind, name, fileInterface)
 	} else {
@@ -83,6 +85,16 @@ func add(flags runFlags, args []string, clusterInterface clusterinterface.Cluste
 		cmd.Stdout = os.Stdout
 		cmd.Run()
 	}
+}
+
+func filterUndesireableKeys(resource map[string]interface{}) {
+	delete(resource["metadata"].(map[interface{}]interface{})["annotations"].(map[interface{}]interface{}), "kubectl.kubernetes.io/last-applied-configuration")
+	delete(resource["metadata"].(map[interface{}]interface{})["annotations"].(map[interface{}]interface{}), "deployment.kubernetes.io/revision")
+	delete(resource["metadata"].(map[interface{}]interface{}), "selfLink")
+	delete(resource["metadata"].(map[interface{}]interface{}), "generation")
+	delete(resource["metadata"].(map[interface{}]interface{}), "creationTimestamp")
+	delete(resource["metadata"].(map[interface{}]interface{}), "resourceVersion")
+	delete(resource, "status")
 }
 
 func writeTemplateToInventory(resource map[string]interface{}, kind string, name string, fileInterface fileinterface.FileInterface) string {
