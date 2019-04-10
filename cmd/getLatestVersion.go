@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"log"
 
 	githubapi "github.com/jacobsee/applier-cli/pkg/github_api"
 	"github.com/spf13/cobra"
@@ -15,8 +16,17 @@ var getLatestVersionCmd = &cobra.Command{
 of OpenShift-Applier. For information purposes only, and not a prerequisite
 for any other command (init performs this action automatically).`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println(githubapi.GetLatestVersionInfo().TagName)
+		releaseAPI := githubapi.GitHubReleaseAPI{}
+		getLatestVer(&releaseAPI)
 	},
+}
+
+func getLatestVer(api githubapi.ReleaseAPI) {
+	release, err := api.GetLatestVersionInfo()
+	if err != nil {
+		log.Fatal("Could not fetch the latest version of OpenShift-Applier.")
+	}
+	fmt.Println(release.TagName)
 }
 
 func init() {

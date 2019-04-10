@@ -2,11 +2,11 @@ package cmd
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
 
+	fileinterface "github.com/jacobsee/applier-cli/pkg/file_interface"
 	githubapi "github.com/jacobsee/applier-cli/pkg/github_api"
 	yamlresources "github.com/jacobsee/applier-cli/pkg/yaml_resources"
 	"github.com/spf13/cobra"
@@ -27,32 +27,38 @@ An Ansible Galaxy requirements file with the latest release of OpenShift-Applier
 	
 In addition, the Ansible Galaxy requirements are installed if the ansible-galaxy bin is available.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		makeAllDirectories()
-		latestReleasedVersion := getLatestApplierReleaseTag()
-		writeConfigs()
-		writeGalaxyRequirements(latestReleasedVersion)
-		installGalaxyRequirements()
+		var fileInterface *fileinterface.FileSystemInterface
+		var releaseAPI *githubapi.GitHubReleaseAPI
+		initRun(fileInterface, releaseAPI)
 	},
 }
 
-func makeAllDirectories() {
-	os.Mkdir("inventory", 0766)
-	os.Mkdir("inventory/host_vars", 0766)
-	os.Mkdir("inventory/group_vars", 0766)
-	os.Mkdir("templates", 0766)
-	os.Mkdir("params", 0766)
-	os.Mkdir("files", 0766)
+func initRun(fileInterface fileinterface.FileInterface, releaseAPI githubapi.ReleaseAPI) {
+	makeAllDirectories(fileInterface)
+	latestReleasedVersion := getLatestApplierReleaseTag(releaseAPI)
+	writeConfigs(fileInterface)
+	writeGalaxyRequirements(latestReleasedVersion, fileInterface)
+	installGalaxyRequirements()
 }
 
-func writeConfigs() {
+func makeAllDirectories(fileInterface fileinterface.FileInterface) {
+	fileInterface.Mkdir("inventory", 0766)
+	fileInterface.Mkdir("inventory/host_vars", 0766)
+	fileInterface.Mkdir("inventory/group_vars", 0766)
+	fileInterface.Mkdir("templates", 0766)
+	fileInterface.Mkdir("params", 0766)
+	fileInterface.Mkdir("files", 0766)
+}
+
+func writeConfigs(fileInterface fileinterface.FileInterface) {
 	hosts := []byte("[seed-hosts]\nlocalhost")
-	err := ioutil.WriteFile("inventory/hosts", hosts, 0766)
+	err := fileInterface.WriteFile("inventory/hosts", hosts, 0766)
 	if err != nil {
 		log.Fatal("Could not write inventory/hosts")
 	}
 
 	hostVars := []byte("ansible_connection: local")
-	err = ioutil.WriteFile("inventory/host_vars/localhost.yml", hostVars, 0766)
+	err = fileInterface.WriteFile("inventory/host_vars/localhost.yml", hostVars, 0766)
 	if err != nil {
 		log.Fatal("Could not write inventory/host_vars/localhost.yml")
 	}
@@ -64,25 +70,28 @@ func writeConfigs() {
       name: roles/openshift-applier
     tags:
     - openshift-applier`)
-	err = ioutil.WriteFile("apply.yml", ansiblePlaybook, 0766)
+	err = fileInterface.WriteFile("apply.yml", ansiblePlaybook, 0766)
 	if err != nil {
 		log.Fatal("Could not write apply.yml")
 	}
 
 	groupVars := &yamlresources.ClusterContentList{}
 	yamlGroupVars, _ := yaml.Marshal(groupVars)
-	err = ioutil.WriteFile("inventory/group_vars/all.yml", yamlGroupVars, 0766)
+	err = fileInterface.WriteFile("inventory/group_vars/all.yml", yamlGroupVars, 0766)
 	if err != nil {
 		log.Fatal("Could not write inventory/group_vars/all.yml")
 	}
 }
 
-func getLatestApplierReleaseTag() string {
-	currentApplierVersion := githubapi.GetLatestVersionInfo()
+func getLatestApplierReleaseTag(releaseAPI githubapi.ReleaseAPI) string {
+	currentApplierVersion, err := releaseAPI.GetLatestVersionInfo()
+	if err != nil {
+		log.Fatal("Could not determine the latest release of OpenShift-Applier.")
+	}
 	return currentApplierVersion.TagName
 }
 
-func writeGalaxyRequirements(version string) {
+func writeGalaxyRequirements(version string, fileInterface fileinterface.FileInterface) {
 	requirements := &yamlresources.Requirements{{
 		Src:     "https://github.com/redhat-cop/openshift-applier",
 		SCM:     "git",
@@ -93,7 +102,7 @@ func writeGalaxyRequirements(version string) {
 	if err != nil {
 		log.Fatal("Could not generate requirements file.")
 	}
-	err = ioutil.WriteFile("requirements.yml", yamlRequirements, 0766)
+	err = fileInterface.WriteFile("requirements.yml", yamlRequirements, 0766)
 	if err != nil {
 		log.Fatal("Could not write requirements file.")
 	}

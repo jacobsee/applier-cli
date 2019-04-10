@@ -12,7 +12,7 @@ import (
 // runCmd represents the run command
 var runCmd = &cobra.Command{
 	Use:   "run",
-	Short: "Provides commands which can be eval'd to run Ansible with the current OpenShift-Applier inventory.",
+	Short: "Provides commands which can be eval'd to run the current OpenShift-Applier inventory.",
 	Long: `Provides commands which can be eval'd to run Ansible 
 with the current OpenShift-Applier inventory. Default is 
 to run using local Ansible, but can also provide the command 
