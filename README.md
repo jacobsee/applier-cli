@@ -2,6 +2,8 @@
 
 Applier-CLI is a tool for initializing and working with [OpenShift-Applier](https://github.com/redhat-cop/openshift-applier) inventories.
 
+[![asciicast](https://asciinema.org/a/240606.svg)](https://asciinema.org/a/240606)
+
 ## Installation
 
 OS X & Linux:
