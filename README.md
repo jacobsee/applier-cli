@@ -1,3 +1,10 @@
+# :no_entry: DEPRECATED REPO - NEW HOME :no_entry:
+
+This original repository is no longer being maintained. All work has moved to the [Red Hat CoP](https://github.com/redhat-cop/applier-cli). Issues, pull requests, etc. submitted to this repo will not receive attention.
+
+The following is for historical purposes **only**!
+
+
 # Applier-CLI
 
 Applier-CLI is a tool for initializing and working with [OpenShift-Applier](https://github.com/redhat-cop/openshift-applier) inventories.
