@@ -15,11 +15,10 @@ import (
 // runCmd represents the run command
 var runCmd = &cobra.Command{
 	Use:   "run",
-	Short: "Provides commands which can be eval'd to run the current OpenShift-Applier inventory.",
-	Long: `Provides commands which can be eval'd to run Ansible 
-with the current OpenShift-Applier inventory. Default is 
-to run using local Ansible, but can also provide the command 
-for running OpenShift-Applier in a Docker container.`,
+	Short: "Runs the current OpenShift-Applier inventory.",
+	Long: `Runs the current OpenShift-Applier inventory. Default is 
+to run using local Ansible, but can also run OpenShift-Applier 
+in a Docker container.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		docker, _ := cmd.Flags().GetBool("docker")
 
