@@ -2,10 +2,10 @@ package cmd
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
+	"strings"
 
 	clusterinterface "github.com/jacobsee/applier-cli/pkg/cluster_interface"
 	fileinterface "github.com/jacobsee/applier-cli/pkg/file_interface"
@@ -64,7 +64,7 @@ func add(flags runFlags, args []string, clusterInterface clusterinterface.Cluste
 		log.Fatal("Unclear where to get the resource. Please use --from-cluster (-c) or --from-file (-f).")
 	}
 	if err != nil {
-		log.Fatal("Unable to get the resource requested.")
+		log.Fatal("Unable to get the resource requested.", err)
 	}
 
 	resourceKind := resource["kind"].(string)
@@ -88,18 +88,24 @@ func add(flags runFlags, args []string, clusterInterface clusterinterface.Cluste
 }
 
 func filterUndesireableKeys(resource map[string]interface{}) {
-	delete(resource["metadata"].(map[interface{}]interface{})["annotations"].(map[interface{}]interface{}), "kubectl.kubernetes.io/last-applied-configuration")
-	delete(resource["metadata"].(map[interface{}]interface{})["annotations"].(map[interface{}]interface{}), "deployment.kubernetes.io/revision")
-	delete(resource["metadata"].(map[interface{}]interface{}), "selfLink")
-	delete(resource["metadata"].(map[interface{}]interface{}), "generation")
-	delete(resource["metadata"].(map[interface{}]interface{}), "creationTimestamp")
-	delete(resource["metadata"].(map[interface{}]interface{}), "resourceVersion")
+	// anything more than one level in needs to have a check to see if the outer level exists.
+	if _, hasMetadata := resource["metadata"]; hasMetadata {
+		delete(resource["metadata"].(map[interface{}]interface{}), "selfLink")
+		delete(resource["metadata"].(map[interface{}]interface{}), "generation")
+		delete(resource["metadata"].(map[interface{}]interface{}), "creationTimestamp")
+		delete(resource["metadata"].(map[interface{}]interface{}), "resourceVersion")
+		if _, hasAnnotations := resource["metadata"].(map[interface{}]interface{})["annotations"]; hasAnnotations {
+			delete(resource["metadata"].(map[interface{}]interface{})["annotations"].(map[interface{}]interface{}), "kubectl.kubernetes.io/last-applied-configuration")
+			delete(resource["metadata"].(map[interface{}]interface{})["annotations"].(map[interface{}]interface{}), "deployment.kubernetes.io/revision")
+		}
+	}
 	delete(resource, "status")
 }
 
 func writeTemplateToInventory(resource map[string]interface{}, kind string, name string, fileInterface fileinterface.FileInterface) string {
 
 	outByte := []byte{}
+	lowerCaseKind := strings.ToLower(kind)
 
 	if kind != "Template" {
 		template := yamlresources.Template{
@@ -118,9 +124,9 @@ func writeTemplateToInventory(resource map[string]interface{}, kind string, name
 		outByte, _ = yaml.Marshal(resource)
 	}
 
-	outFile := fmt.Sprintf("templates/%s.yml", name)
-	paramsFile := fmt.Sprintf("params/%s", name)
-	err := ioutil.WriteFile(outFile, outByte, 0766)
+	outFile := fmt.Sprintf("templates/%s-%s.yml", name, lowerCaseKind)
+	paramsFile := fmt.Sprintf("params/%s-%s", name, lowerCaseKind)
+	err := fileInterface.WriteFile(outFile, outByte, 0766)
 
 	fileInterface.TouchParamsFile(paramsFile)
 
@@ -132,8 +138,8 @@ func writeTemplateToInventory(resource map[string]interface{}, kind string, name
 		Object: name,
 		Content: []yamlresources.ClusterContent{{
 			Name:     name,
-			Template: outFile,
-			Params:   paramsFile,
+			Template: fmt.Sprintf("{{ inventory_dir }}/../%s", outFile),
+			Params:   fmt.Sprintf("{{ inventory_dir }}/../%s", paramsFile),
 		}},
 	})
 	err = fileInterface.WriteClusterContents(clusterContents)
@@ -151,8 +157,9 @@ func writeTemplateToInventory(resource map[string]interface{}, kind string, name
 func writeFileToInventory(resource map[string]interface{}, kind string, name string, fileInterface fileinterface.FileInterface) string {
 
 	outByte, _ := yaml.Marshal(resource)
+	lowerCaseKind := strings.ToLower(kind)
 
-	outFile := fmt.Sprintf("files/%s.yml", name)
+	outFile := fmt.Sprintf("files/%s-%s.yml", name, lowerCaseKind)
 	err := fileInterface.WriteFile(outFile, outByte, 0766)
 	if err != nil {
 		log.Fatal("Unable to write the file to the current inventory.")
@@ -167,7 +174,7 @@ func writeFileToInventory(resource map[string]interface{}, kind string, name str
 		Object: name,
 		Content: []yamlresources.ClusterContent{{
 			Name: name,
-			File: outFile,
+			File: fmt.Sprintf("{{ inventory_dir }}/../%s", outFile),
 		}},
 	})
 	fileInterface.WriteClusterContents(clusterContents)

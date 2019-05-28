@@ -13,7 +13,8 @@ func (cluster *MockClusterInterface) GetResource(resourceName string) (map[strin
 		dummyData = map[string]interface{}{
 			"kind": "pod",
 			"metadata": map[interface{}]interface{}{
-				"name": "test_pod",
+				"name":        "nginx",
+				"annotations": map[interface{}]interface{}{},
 			},
 		}
 	}

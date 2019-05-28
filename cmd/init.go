@@ -64,10 +64,10 @@ func writeConfigs(fileInterface fileinterface.FileInterface) {
 	}
 
 	ansiblePlaybook := []byte(`- name: Deploy OpenShift-Applier Inventory
-  hosts: "seed-hosts"
+  hosts: seed-hosts[0]
   tasks:
   - include_role:
-      name: roles/openshift-applier
+      name: roles/openshift-applier/roles/openshift-applier
     tags:
     - openshift-applier`)
 	err = fileInterface.WriteFile("apply.yml", ansiblePlaybook, 0766)
@@ -109,7 +109,7 @@ func writeGalaxyRequirements(version string, fileInterface fileinterface.FileInt
 }
 
 func installGalaxyRequirements() {
-	galaxy := exec.Command("ansible-galaxy", "install", "-r", "requirements.yml", "--roles-path=roles", "--f")
+	galaxy := exec.Command("ansible-galaxy", "install", "-r", "requirements.yml", "--roles-path=roles", "-f")
 	galaxy.Dir, _ = os.Getwd()
 	_, err := galaxy.Output()
 	fmt.Println("Initialized empty openshift-applier inventory")

@@ -10,6 +10,7 @@ import (
 type FileInterface interface {
 	Mkdir(name string, perm os.FileMode) error
 	ReadClusterContents() (yamlresources.ClusterContentList, error)
+	ReadFile(filename string) ([]byte, error)
 	ReadResource(fileName string) (map[string]interface{}, error)
 	TouchParamsFile(fileName string) error
 	WriteClusterContents(yamlresources.ClusterContentList) error

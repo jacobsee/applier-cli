@@ -1,6 +1,7 @@
 package fileinterface
 
 import (
+	"errors"
 	"os"
 
 	yamlresources "github.com/jacobsee/applier-cli/pkg/yaml_resources"
@@ -25,14 +26,24 @@ func (fileInterface *MockFileInterface) ReadClusterContents() (yamlresources.Clu
 	return ClusterContents, err
 }
 
+// ReadFile simply reads a file from the virtual filesystem and returns the content as a byte array
+func (fileInterface *MockFileInterface) ReadFile(filename string) ([]byte, error) {
+	if contents, ok := fileInterface.Files[filename]; ok {
+		return contents, nil
+	}
+	return []byte{}, errors.New("could not find file")
+}
+
 // ReadResource reads and unmarshals a yaml file from the virtual filesystem.
 func (fileInterface *MockFileInterface) ReadResource(filename string) (map[string]interface{}, error) {
 	var resource map[string]interface{}
 
-	fileContents := fileInterface.Files[filename]
-	err := yaml.Unmarshal(fileContents, &resource)
-
-	return resource, err
+	// fileContents := fileInterface.Files[filename]
+	if contents, ok := fileInterface.Files[filename]; ok {
+		err := yaml.Unmarshal(contents, &resource)
+		return resource, err
+	}
+	return map[string]interface{}{}, errors.New("could not find file")
 }
 
 // TouchParamsFile creates the params file for a template on the virtual filesystem, and writes an example to it.

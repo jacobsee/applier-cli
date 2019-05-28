@@ -115,33 +115,27 @@ v2.0.8
 
 ### run
 
-Displays the command to be used to run the current inventory.
+Runs the current inventory against the cluster that the local `oc` client is logged in to.
 
 #### Usage
 
-With no flags set, `run` displays the command for running `ansible-playbook` on your local machine. There is also a `--docker` flag, which displays the command to run the current inventory using OpenShift-Applier in a Docker container.
+With no flags set, `run` executes `ansible-playbook` on your local machine. There is also a `--docker` flag, which uses the OpenShift-Applier Docker container to run the playbook.
 
 #### Example
 
 ```sh
 ↪ applier-cli run
-ansible-playbook apply.yml -i inventory/
+<ansible-playbook output>
 ```
 
 ```sh
 ↪ applier-cli run --docker
-docker run -u $(id -u) \
--v $HOME/.kube/config:/openshift-applier/.kube/config:z
--v $HOME/src/inventory/:/tmp/inventory
--e INVENTORY_PATH=/tmp/inventory
--t redhatcop/openshift-applier
+<docker output... which should also look like an ansible playbook>
 ```
 
 #### Notes
 
 :information_source: When the `--docker` flag is used, this command attempts to determine the current state of SELinux on the local machine. If SELinux is `enforcing`, this command adds`:z` to the Docker volume mount to ensure that filesystem permissions are correct.
-
-:information_source: The command output of `run` can be executed directly in bash using `eval $(applier-cli run)`.
 
 ---
 

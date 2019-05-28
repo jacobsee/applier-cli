@@ -27,6 +27,11 @@ func (fileInterface *FileSystemInterface) ReadClusterContents() (yamlresources.C
 	return clusterContents, err
 }
 
+// ReadFile simply reads a file from the filesystem and returns the content as a byte array
+func (fileInterface *FileSystemInterface) ReadFile(filename string) ([]byte, error) {
+	return ioutil.ReadFile(filename)
+}
+
 // ReadResource reads and unmarshals a yaml file from the filesystem.
 func (fileInterface *FileSystemInterface) ReadResource(fileName string) (map[string]interface{}, error) {
 	var resource map[string]interface{}
